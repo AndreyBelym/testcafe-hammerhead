@@ -1,12 +1,46 @@
 import SandboxBase from '../base';
 import { isNullOrUndefined, inaccessibleTypeToStr, isWindow, isDocument } from '../../utils/types';
 import { DOCUMENT_WRITE_BEGIN_PARAM, DOCUMENT_WRITE_END_PARAM, CALL_METHOD_METH_NAME } from '../../../processing/js';
+import { FOCUS_PSEUDO_CLASS_ATTR } from '../../../const';
+import { isDomElement } from '../../utils/dom';
+import { isIE } from '../../utils/browser';
+
+function replaceFocusPseudoClass (selector) {
+    return selector.replace(/\s*:focus\b/gi, '[' + FOCUS_PSEUDO_CLASS_ATTR + ']');
+}
 
 export default class MethodCallInstrumentation extends SandboxBase {
     constructor (sandbox) {
         super(sandbox);
 
         this.methodWrappers = {
+            // NOTE: When a selector that contains the ':focus' pseudo-class is used in the querySelector and
+            // querySelectorAll functions, the latter return an empty result if the browser is not focused.
+            // This replaces ':focus' with a custom CSS class to return the current active element in that case.
+            querySelector: {
+                condition: element => !isIE && (isDocument(element) || isDomElement(element)),
+
+                method: (element, args) => {
+                    var selector = args[0];
+
+                    if (typeof selector === 'string')
+                        selector = replaceFocusPseudoClass(selector);
+
+                    return element.querySelector(selector);
+                }
+            },
+            querySelectorAll: {
+                condition: element => !isIE && (isDocument(element) || isDomElement(element)),
+
+                method: (element, args) => {
+                    var selector = args[0];
+
+                    if (typeof selector === 'string')
+                        selector = replaceFocusPseudoClass(selector);
+
+                    return element.querySelectorAll(selector);
+                }
+            },
             postMessage: {
                 condition: window => isWindow(window),
                 method:    (contentWindow, args) => this.sandbox.message.postMessage(contentWindow, args)

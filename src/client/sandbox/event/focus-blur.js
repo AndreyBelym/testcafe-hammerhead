@@ -4,7 +4,7 @@ import nativeMethods from '../native-methods';
 import * as browserUtils from '../../utils/browser';
 import * as domUtils from '../../utils/dom';
 import { getElementScroll, setScrollLeft, setScrollTop } from '../../utils/style';
-import { HOVER_PSEUDO_CLASS_ATTR, PROPERTY_PREFIX } from '../../../const';
+import { HOVER_PSEUDO_CLASS_ATTR, FOCUS_PSEUDO_CLASS_ATTR, PROPERTY_PREFIX } from '../../../const';
 import { isSVGElement } from '../../utils/types';
 
 const INTERNAL_FOCUS_FLAG = PROPERTY_PREFIX + 'iff';
@@ -18,6 +18,7 @@ export default class FocusBlurSandbox extends SandboxBase {
         this.topWindow                       = null;
         this.hoverElementFixed               = false;
         this.lastHoveredElement              = null;
+        this.lastFocusedElement              = null;
 
         this.eventSimulator      = eventSimulator;
         this.activeWindowTracker = new ActiveWindowTracker(sandbox);
@@ -88,6 +89,24 @@ export default class FocusBlurSandbox extends SandboxBase {
     _onMouseOut (e) {
         if (!domUtils.isShadowUIElement(e.target))
             this.lastHoveredElement = e.target;
+    }
+
+    _onChangeActiveElement (activeElement) {
+        if (this.lastFocusedElement === activeElement)
+            return;
+
+        if (this.lastFocusedElement &&
+            nativeMethods.getAttribute.call(this.lastFocusedElement, FOCUS_PSEUDO_CLASS_ATTR))
+            nativeMethods.removeAttribute.call(this.lastFocusedElement, FOCUS_PSEUDO_CLASS_ATTR);
+
+        if (domUtils.isElementFocusable(activeElement) &&
+            !(activeElement.tagName && activeElement.tagName.toLowerCase() === 'body' &&
+            activeElement.getAttribute('tabIndex') === null)) {
+            this.lastFocusedElement = activeElement;
+            nativeMethods.setAttribute.call(activeElement, FOCUS_PSEUDO_CLASS_ATTR, true);
+        }
+        else
+            this.lastFocusedElement = null;
     }
 
     _callFocusCallback (callback, el) {
@@ -201,6 +220,9 @@ export default class FocusBlurSandbox extends SandboxBase {
 
         this.sandbox.event.listeners.addInternalEventListener(window, ['mouseover'], e => this._onMouseOverHandler(e));
         this.sandbox.event.listeners.addInternalEventListener(window, ['mouseout'], e => this._onMouseOut(e));
+        this.sandbox.event.listeners.addInternalEventListener(window, ['focus', 'blur'],
+            () => this._onChangeActiveElement(document.activeElement)
+        );
     }
 
     focus (el, callback, silent, forMouseEvent, isNativeFocus) {

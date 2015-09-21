@@ -2,9 +2,27 @@ import CONST from '../../const';
 import trim from '../../utils/string-trim';
 import nativeMethods from '../sandbox/native-methods';
 import urlUtils from '../utils/url';
-import { isMozilla } from './browser';
+import { isMozilla, isWebKit, isIE, isOpera } from './browser';
 
 var scrollbarSize = null;
+
+function getFocusableSelector () {
+    //NOTE: We don't take into account the case of embedded contentEditable elements and
+    // specify the contentEditable attribute for focusable elements
+    var selectorPostfix = 'input, select, textarea, button, [contenteditable="true"], [contenteditable=""], [tabIndex]';
+
+    if (isIE)
+        return 'a[href]:not([href = ""]), iframe, ' + selectorPostfix;
+
+    if (isOpera)
+        return selectorPostfix;
+
+    return 'a[href], iframe, ' + selectorPostfix;
+}
+
+function isHidden (element) {
+    return element.offsetWidth <= 0 && element.offsetHeight <= 0;
+}
 
 export function getActiveElement (currentDocument) {
     var doc           = currentDocument || document;
@@ -262,6 +280,26 @@ export function isMapElement (el) {
 
 export function isRenderedNode (node) {
     return !(node.nodeType === 7 || node.nodeType === 8 || /^(script|style)$/i.test(node.nodeName));
+}
+
+export function isElementFocusable (element) {
+    if (!element)
+        return false;
+
+    var isAnchorWithoutHref = element.tagName && element.tagName.toLowerCase() === 'a' &&
+                              element.getAttribute('href') === '' && !element.getAttribute('tabIndex');
+    var isFocusable         = !isAnchorWithoutHref && matches(element, getFocusableSelector() + ', body') &&
+                              !matches(element, ':disabled') &&
+                              element.getAttribute('tabIndex') !== -1 &&
+                              getComputedStyle(element)['visibility'] !== 'hidden';
+
+    if (!isFocusable)
+        return false;
+
+    if (isWebKit || isOpera)
+        return !isHidden(element) || element.tagName && element.tagName.toLowerCase() === 'option';
+
+    return isFocusable && !isHidden(element);
 }
 
 export function isShadowUIElement (element) {
