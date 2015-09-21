@@ -218,11 +218,11 @@ export default class FocusBlurSandbox extends SandboxBase {
         this.activeWindowTracker.attach(window);
         this.topWindow = domUtils.isCrossDomainWindows(window, window.top) ? window : window.top;
 
-        this.sandbox.event.listeners.addInternalEventListener(window, ['mouseover'], e => this._onMouseOverHandler(e));
-        this.sandbox.event.listeners.addInternalEventListener(window, ['mouseout'], e => this._onMouseOut(e));
-        this.sandbox.event.listeners.addInternalEventListener(window, ['focus', 'blur'],
-            () => this._onChangeActiveElement(document.activeElement)
-        );
+        var listeners = this.sandbox.event.listeners;
+
+        listeners.addInternalEventListener(window, ['mouseover'], e => this._onMouseOverHandler(e));
+        listeners.addInternalEventListener(window, ['mouseout'], e => this._onMouseOut(e));
+        listeners.addInternalEventListener(window, ['focus', 'blur'], () => this._onChangeActiveElement(document.activeElement));
     }
 
     focus (el, callback, silent, forMouseEvent, isNativeFocus) {

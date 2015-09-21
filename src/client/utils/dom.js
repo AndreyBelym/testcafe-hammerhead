@@ -286,9 +286,13 @@ export function isElementFocusable (element) {
     if (!element)
         return false;
 
-    var isAnchorWithoutHref = element.tagName && element.tagName.toLowerCase() === 'a' &&
-                              element.getAttribute('href') === '' && !element.getAttribute('tabIndex');
-    var isFocusable         = !isAnchorWithoutHref && matches(element, getFocusableSelector() + ', body') &&
+    var isAnchorWithoutHref = element.tagName &&
+                              element.tagName.toLowerCase() === 'a' &&
+                              element.getAttribute('href') === '' &&
+                              !element.getAttribute('tabIndex');
+
+    var isFocusable         = !isAnchorWithoutHref &&
+                              matches(element, getFocusableSelector() + ', body') &&
                               !matches(element, ':disabled') &&
                               element.getAttribute('tabIndex') !== -1 &&
                               getComputedStyle(element)['visibility'] !== 'hidden';
@@ -299,7 +303,7 @@ export function isElementFocusable (element) {
     if (isWebKit || isOpera)
         return !isHidden(element) || element.tagName && element.tagName.toLowerCase() === 'option';
 
-    return isFocusable && !isHidden(element);
+    return !isHidden(element);
 }
 
 export function isShadowUIElement (element) {
@@ -316,6 +320,30 @@ export function isShadowUIElement (element) {
     }
 
     return false;
+}
+
+export function isWindow (instance) {
+    if (instance instanceof nativeMethods.windowClass)
+        return true;
+
+    var result = instance && typeof instance === 'object' && typeof instance.top !== 'undefined' &&
+                 (isMozilla ? true : instance.toString && (instance.toString() === '[object Window]' ||
+                                                           instance.toString() === '[object global]'));
+
+    if (result && instance.top !== instance)
+        return isWindow(instance.top);
+
+    return result;
+}
+
+
+export function isDocument (instance) {
+    if (instance instanceof nativeMethods.documentClass)
+        return true;
+
+    return instance && typeof instance === 'object' && typeof instance.referrer !== 'undefined' &&
+           instance.toString &&
+           (instance.toString() === '[object HTMLDocument]' || instance.toString() === '[object Document]');
 }
 
 export function isSvgElement (el) {

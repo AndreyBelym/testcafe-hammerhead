@@ -1,13 +1,9 @@
 import SandboxBase from '../base';
-import { isNullOrUndefined, inaccessibleTypeToStr, isWindow, isDocument } from '../../utils/types';
+import { isNullOrUndefined, inaccessibleTypeToStr } from '../../utils/types';
 import { DOCUMENT_WRITE_BEGIN_PARAM, DOCUMENT_WRITE_END_PARAM, CALL_METHOD_METH_NAME } from '../../../processing/js';
 import { FOCUS_PSEUDO_CLASS_ATTR } from '../../../const';
-import { isDomElement } from '../../utils/dom';
+import { isWindow, isDocument, isDomElement } from '../../utils/dom';
 import { isIE } from '../../utils/browser';
-
-function replaceFocusPseudoClass (selector) {
-    return selector.replace(/\s*:focus\b/gi, '[' + FOCUS_PSEUDO_CLASS_ATTR + ']');
-}
 
 export default class MethodCallInstrumentation extends SandboxBase {
     constructor (sandbox) {
@@ -24,11 +20,12 @@ export default class MethodCallInstrumentation extends SandboxBase {
                     var selector = args[0];
 
                     if (typeof selector === 'string')
-                        selector = replaceFocusPseudoClass(selector);
+                        selector = MethodCallInstrumentation._replaceFocusPseudoClass(selector);
 
                     return element.querySelector(selector);
                 }
             },
+
             querySelectorAll: {
                 condition: element => !isIE && (isDocument(element) || isDomElement(element)),
 
@@ -36,11 +33,12 @@ export default class MethodCallInstrumentation extends SandboxBase {
                     var selector = args[0];
 
                     if (typeof selector === 'string')
-                        selector = replaceFocusPseudoClass(selector);
+                        selector = MethodCallInstrumentation._replaceFocusPseudoClass(selector);
 
                     return element.querySelectorAll(selector);
                 }
             },
+
             postMessage: {
                 condition: window => isWindow(window),
                 method:    (contentWindow, args) => this.sandbox.message.postMessage(contentWindow, args)
@@ -95,5 +93,9 @@ export default class MethodCallInstrumentation extends SandboxBase {
             return this.methodWrappers[methName].condition(owner) ?
                    this.methodWrappers[methName].method(owner, args) : owner[methName].apply(owner, args);
         };
+    }
+
+    static _replaceFocusPseudoClass (selector) {
+        return selector.replace(/\s*:focus\b/gi, '[' + FOCUS_PSEUDO_CLASS_ATTR + ']');
     }
 }

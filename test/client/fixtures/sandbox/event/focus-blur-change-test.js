@@ -976,7 +976,7 @@ test('querySelector must return active element even when browser is not focused 
 
     result = eval(processScript('document.querySelectorAll(":focus")'));
 
-    if (Browser.isIE) {
+    if (Browser.isIE && !Browser.isMSEdge) {
         strictEqual(result.length, 1);
         strictEqual(result[0], document.body);
     }
