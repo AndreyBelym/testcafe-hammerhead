@@ -14,7 +14,7 @@ export default class HoverSandbox extends SandboxBase {
     }
 
     static _setHoverMarker (newHoveredElement, jointParent) {
-        if (jointParent)
+        if (jointParent && jointParent.tagName)
             nativeMethods.setAttribute.call(jointParent, INTERNAL_ATTRS.hoverPseudoClass, '');
 
         while (newHoveredElement && newHoveredElement.tagName) {
@@ -30,7 +30,7 @@ export default class HoverSandbox extends SandboxBase {
 
     // NOTE: In this method, we go up to the tree of elements and look for a joint parent for the
     // previous and new hovered elements. Processing is needed only until  that parent is found.
-    // In this case, we’ll  reduce the number of dom calls.
+    // In this case, weï¿½ll  reduce the number of dom calls.
     _clearHoverMarkerUntilJointParent (newHoveredElement) {
         var jointParent = null;
 
@@ -49,7 +49,7 @@ export default class HoverSandbox extends SandboxBase {
 
             jointParent = el;
 
-            if (jointParent)
+            if (jointParent && jointParent.tagName)
                 nativeMethods.removeAttribute.call(jointParent, INTERNAL_ATTRS.hoverPseudoClass);
         }
 

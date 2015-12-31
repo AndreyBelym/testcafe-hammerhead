@@ -91,7 +91,7 @@ export default class Proxy extends Router {
                 respondWithJSON(res, result || '');
             }
             catch (err) {
-                respond500(res, err.toString());
+                respond500(res, err.stack);
             }
         }
         else

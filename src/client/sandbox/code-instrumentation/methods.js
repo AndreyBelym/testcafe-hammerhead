@@ -5,7 +5,21 @@ import INTERNAL_LITERAL from '../../../processing/script/internal-literal';
 import INSTRUCTION from '../../../processing/script/instruction';
 import { shouldInstrumentMethod } from '../../../processing/script/instrumented';
 import { isWindow, isDocument, isDomElement } from '../../utils/dom';
-import { isIE } from '../../utils/browser';
+import { isIE, isFirefox } from '../../utils/browser';
+
+function cloneStyle (style) {
+    var clonedStyle = {};
+
+    try {
+        for (var i = 0; i < style.length; i++)
+            clonedStyle[style[i]] = style[style[i]];
+
+        return clonedStyle;
+    }
+    catch (e) {
+        return null;
+    }
+}
 
 export default class MethodCallInstrumentation extends SandboxBase {
     constructor (messageSandbox) {
@@ -15,6 +29,37 @@ export default class MethodCallInstrumentation extends SandboxBase {
             // NOTE: When a selector that contains the ':focus' pseudo-class is used in the querySelector and
             // querySelectorAll functions, these functions return an empty result if the browser is not focused.
             // This replaces ':focus' with a custom CSS class to return the current active element in that case.
+            getComputedStyle: {
+                condition: win => isFirefox && isWindow(win) && win.frameElement,
+
+                method: (win, args) => {
+                    var style  = win.getComputedStyle.apply(win, args);
+                    var result = style ? cloneStyle(style) : null;
+
+                    try {
+                        var changes = [];
+                        var element = win.frameElement;
+
+                        while (element.tagName && !result) {
+                            changes.push({ element, display: element.style.display });
+                            element.display = 'block';
+                            element         = element.parentNode;
+
+                            style  = win.getComputedStyle.apply(win, args);
+                            result = style ? cloneStyle(style) : null;
+                        }
+
+                        changes.forEach(ch => ch.element.style.display = ch.display);
+
+                        return result ? result : null;
+                    }
+                    catch (e) {
+                        return null;
+                    }
+
+                }
+            },
+
             querySelector: {
                 condition: el => !isIE && (isDocument(el) || isDomElement(el)),
 

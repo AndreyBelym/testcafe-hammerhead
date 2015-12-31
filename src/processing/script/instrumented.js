@@ -5,6 +5,7 @@
 
 // NOTE: constants are exported for the testing purposes
 export const METHODS = [
+    'getComputedStyle',
     'querySelector',
     'querySelectorAll',
     'postMessage',
